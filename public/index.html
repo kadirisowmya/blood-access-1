@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blood Access - Emergency Blood Management</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <nav>
+        <a href="/" class="logo"><i class="fas fa-drop"></i> Blood Access</a>
+        <div class="nav-links">
+            <a href="/">Home</a>
+            <a href="#about">About</a>
+            <a href="login.html" id="loginHeader">Login</a>
+            <a href="register.html" class="btn btn-primary" id="registerHeader">Register</a>
+            <a href="#" id="logoutBtn" style="display:none;" onclick="logout()">Logout</a>
+        </div>
+    </nav>
+
+    <header class="hero">
+        <div class="hero-content">
+            <h1 style="font-size: 3.8rem; margin-bottom: 30px;">Every blood donor is a <br><span style="color: var(--primary);">Life Saver.</span></h1>
+            <p>Find blood donors and hospitals near you fast. We help you in medical emergencies.</p>
+            <div style="display: flex; gap: 20px;">
+                <a href="register.html" class="btn btn-primary">Get Started</a>
+                <a href="login.html" class="btn" style="background: #fff; color: var(--secondary); border: 1px solid #ddd;">Patient Login</a>
+            </div>
+        </div>
+        <div class="hero-img">
+            <img src="blood-bag.png" alt="Blood Access Premium">
+        </div>
+    </header>
+
+    <section class="features" id="about" style="background: rgba(255, 255, 255, 0.4); border-radius: 40px; padding: 60px 8%; margin: 40px auto; max-width: 90%;">
+        <div class="feature-card">
+            <div class="icon-box"><i class="fas fa-hospital-user"></i></div>
+            <h3>Hospital Stock</h3>
+            <p>We check nearby hospital stocks first to get you blood as fast as possible.</p>
+        </div>
+        <div class="feature-card">
+            <div class="icon-box"><i class="fas fa-hand-holding-heart"></i></div>
+            <h3>Quick Donors</h3>
+            <p>If hospitals are out of stock, we connect you with local people ready to donate.</p>
+        </div>
+        <div class="feature-card">
+            <div class="icon-box"><i class="fas fa-user-check"></i></div>
+            <h3>Verified & Safe</h3>
+            <p>Our system is built to help you find blood in any emergency safely and easily.</p>
+        </div>
+    </section>
+
+    <footer style="padding: 40px; text-align: center; background: #212121; color: #fff;">
+        <p>&copy; 2026 Blood Access System. All rights reserved.</p>
+    </footer>
+
+    <script>
+        const token = localStorage.getItem('token');
+        if (token) {
+            document.getElementById('loginHeader').style.display = 'none';
+            document.getElementById('registerHeader').style.display = 'none';
+            document.getElementById('logoutBtn').style.display = 'block';
+            
+            const role = localStorage.getItem('role');
+            const dashboardLink = document.createElement('a');
+            dashboardLink.href = `${role}-dashboard.html`;
+            dashboardLink.innerText = 'Dashboard';
+            dashboardLink.style.marginRight = '20px';
+            document.querySelector('.nav-links').prepend(dashboardLink);
+        }
+
+        function logout() {
+            localStorage.clear();
+            window.location.href = 'index.html';
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register - Blood Access</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <nav>
+        <a href="/" class="logo"><i class="fas fa-drop"></i> Blood Access</a>
+    </nav>
+
+    <div class="auth-container">
+        <h2 style="text-align: center; margin-bottom: 30px;">Create Account</h2>
+        <form id="registerForm">
+            <div class="form-group">
+                <label>Full Name</label>
+                <input type="text" id="name" required placeholder="Full Name/Hospital Name">
+            </div>
+            <div class="form-group">
+                <label>Email</label>
+                <input type="email" id="email" required placeholder="example@email.com">
+            </div>
+            <div class="form-group">
+                <label>Role</label>
+                <select id="role" onchange="toggleDonorFields()">
+                    <option value="donor">Donor</option>
+                    <option value="hospital">Hospital</option>
+                    <option value="patient">Patient</option>
+                    <option value="admin">Admin</option>
+                </select>
+            </div>
+            <div id="donorFields">
+                <div class="form-group">
+                    <label>Blood Group</label>
+                    <select id="blood_group">
+                        <option value="A+">A+</option>
+                        <option value="A-">A-</option>
+                        <option value="B+">B+</option>
+                        <option value="B-">B-</option>
+                        <option value="AB+">AB+</option>
+                        <option value="AB-">AB-</option>
+                        <option value="O+">O+</option>
+                        <option value="O-">O-</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Location (City/Area)</label>
+                <input type="text" id="location" required placeholder="e.g. Hyderabad, Uppal">
+            </div>
+            <div class="form-group">
+                <label>Phone Number</label>
+                <input type="text" id="phone" required placeholder="10-digit number">
+            </div>
+            <button type="submit" class="btn btn-primary" style="width: 100%;">Sign Up</button>
+            <p style="text-align: center; margin-top: 20px;">Already have an account? <a href="login.html">Login here</a></p>
+        </form>
+    </div>
+
+    <script>
+        function toggleDonorFields() {
+            const role = document.getElementById('role').value;
+            const donorFields = document.getElementById('donorFields');
+            donorFields.style.display = (role === 'donor') ? 'block' : 'none';
+        }
+
+        document.getElementById('registerForm').onsubmit = async (e) => {
+            e.preventDefault();
+            const data = {
+                name: document.getElementById('name').value,
+                email: document.getElementById('email').value,
+                role: document.getElementById('role').value,
+                location: document.getElementById('location').value,
+                phone: document.getElementById('phone').value,
+                blood_group: (document.getElementById('role').value === 'donor') ? document.getElementById('blood_group').value : null
+            };
+
+            try {
+                const res = await fetch('/api/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                const response = await res.json();
+                if (res.status === 201) {
+                    alert('Registration successful! Please login.');
+                    window.location.href = 'login.html';
+                } else {
+                    alert(response.error || 'Registration failed.');
+                }
+            } catch (err) {
+                alert('An error occurred.');
+            }
+        };
+    </script>
+</body>
+</html>

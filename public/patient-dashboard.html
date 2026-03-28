@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Patient Dashboard - Search Blood</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <nav>
+        <a href="/" class="logo"><i class="fas fa-drop"></i> Blood Access</a>
+        <div class="nav-links">
+            <span style="color: var(--primary); font-weight: 700; margin-right: 15px;"><i class="fas fa-user-circle"></i> <span id="navUserName"></span></span>
+            <a href="profile.html">My Profile</a>
+            <a href="index.html">Home</a>
+            <a href="#" onclick="localStorage.clear(); window.location.href='login.html'">Logout</a>
+        </div>
+    </nav>
+
+    <div class="dashboard">
+        <h2>Find Blood</h2>
+        <p>Welcome, <strong id="dashUserName" style="color: var(--primary);"></strong>! Search for blood across hospitals and donors.</p>
+
+        <div class="auth-container" style="max-width: 900px; margin: 50px auto; padding: 35px; display: flex; gap: 20px; flex-wrap: wrap; align-items: flex-end; box-shadow: 0 15px 45px rgba(0,0,0,0.1); border: 1px solid var(--border);">
+            <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                <label>Blood Group</label>
+                <select id="searchGroup">
+                    <option value="A+">A+</option>
+                    <option value="A-">A-</option>
+                    <option value="B+">B+</option>
+                    <option value="B-">B-</option>
+                    <option value="AB+">AB+</option>
+                    <option value="AB-">AB-</option>
+                    <option value="O+">O+</option>
+                    <option value="O-">O-</option>
+                </select>
+            </div>
+            <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                <label>Location</label>
+                <input type="text" id="searchLocation" placeholder="City or area">
+            </div>
+            <div class="form-group" style="flex: 1.5; min-width: 250px; margin-bottom: 0;">
+                <label>Required Date &amp; Time</label>
+                <div style="display: flex; gap: 10px;">
+                    <input type="date" id="neededDate" required style="flex: 1; width: auto;">
+                    <input type="time" id="neededTime" required style="flex: 1; width: auto;">
+                </div>
+            </div>
+            <button onclick="searchBlood()" class="btn btn-primary">Search</button>
+        </div>
+
+        <div id="results" style="margin-top: 40px;">
+            <h3>Hospital Stock Results</h3>
+            <table class="stock-table" id="hospitalResults">
+                <thead><tr><th>Hospital</th><th>Blood Group</th><th>Quantity</th><th>Location</th><th>Contact</th><th>Action</th></tr></thead>
+                <tbody></tbody>
+            </table>
+
+            <h3 style="margin-top: 40px;">Registered Donor Results</h3>
+            <table class="stock-table" id="donorResults">
+                <thead><tr><th>Donor Name</th><th>Blood Group</th><th>Location</th><th>Contact</th><th>Action</th></tr></thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        const token = localStorage.getItem('token');
+        if (!token) window.location.href = 'login.html';
+
+        const name = localStorage.getItem('name') || 'User';
+        document.getElementById('navUserName').textContent = name;
+        document.getElementById('dashUserName').textContent = name;
+
+        // Load full profile from server
+        async function loadProfile() {
+            try {
+                const res = await fetch('/api/profile', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                if (!res.ok) return;
+                const p = await res.json();
+                document.getElementById('pName').textContent = p.name;
+                document.getElementById('pEmail').innerHTML = '<i class="fas fa-envelope"></i> ' + p.email;
+                document.getElementById('pRole').textContent = p.role.toUpperCase();
+                document.getElementById('pBlood').textContent = p.blood_group ? '🩸 ' + p.blood_group : '';
+                document.getElementById('pPhone').innerHTML = p.phone ? '<i class="fas fa-phone"></i> ' + p.phone : '';
+                document.getElementById('pLocation').innerHTML = p.location ? '<i class="fas fa-map-marker-alt"></i> ' + p.location : '';
+                document.getElementById('pJoined').textContent = new Date(p.created_at).toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' });
+            } catch (e) { console.error('Profile load failed', e); }
+        }
+        loadProfile();
+
+        function formatTime(t) {
+            const [h, m] = t.split(':');
+            const p = parseInt(h) >= 12 ? 'PM' : 'AM';
+            return (parseInt(h) % 12 || 12) + ':' + m + ' ' + p;
+        }
+
+        async function searchBlood() {
+            const group = document.getElementById('searchGroup').value;
+            const location = document.getElementById('searchLocation').value;
+            const dateInput = document.getElementById('neededDate').value;
+            const timeInput = document.getElementById('neededTime').value;
+
+            if (!dateInput || !timeInput) {
+                return alert('Please select required Date and Time first.');
+            }
+
+            const displayTime = formatTime(timeInput);
+
+            // Search Hospitals
+            const stockRes = await fetch('/api/stock?blood_group=' + encodeURIComponent(group) + '&location=' + encodeURIComponent(location));
+            const stocks = await stockRes.json();
+
+            const hospTable = document.querySelector('#hospitalResults tbody');
+            hospTable.innerHTML = '';
+
+            if (stocks.length === 0) {
+                hospTable.innerHTML = '<tr><td colspan="5" style="text-align:center; color: gray;">No hospital stock found.</td></tr>';
+            } else {
+                stocks.forEach(function(stock) {
+                    const tr = document.createElement('tr');
+                    const btn = document.createElement('button');
+                    btn.className = 'btn btn-primary request-btn';
+                    btn.textContent = 'Request';
+                    btn.dataset.id = stock.hospital_id;
+                    btn.dataset.name = stock.hospital_name;
+                    btn.dataset.date = dateInput;
+                    btn.dataset.time = displayTime;
+                    btn.dataset.group = group;
+
+                    const tdName = document.createElement('td'); tdName.textContent = stock.hospital_name;
+                    const tdGroup = document.createElement('td'); tdGroup.textContent = stock.blood_group;
+                    const tdQty = document.createElement('td'); tdQty.textContent = stock.quantity + ' Unit(s)';
+                    const tdLoc = document.createElement('td'); tdLoc.textContent = stock.location;
+                    const tdPhone = document.createElement('td');
+                    tdPhone.innerHTML = stock.hospital_phone
+                        ? '<a href="tel:' + stock.hospital_phone + '" style="color: var(--primary); font-weight: 600;"><i class="fas fa-phone"></i> ' + stock.hospital_phone + '</a>'
+                        : '<span style="color: gray;">N/A</span>';
+                    const tdAction = document.createElement('td'); tdAction.appendChild(btn);
+
+                    tr.appendChild(tdName);
+                    tr.appendChild(tdGroup);
+                    tr.appendChild(tdQty);
+                    tr.appendChild(tdLoc);
+                    tr.appendChild(tdPhone);
+                    tr.appendChild(tdAction);
+                    hospTable.appendChild(tr);
+                });
+            }
+
+            // Search Donors
+            const donorRes = await fetch('/api/donors?blood_group=' + encodeURIComponent(group) + '&location=' + encodeURIComponent(location));
+            const donors = await donorRes.json();
+
+            const donorTable = document.querySelector('#donorResults tbody');
+            donorTable.innerHTML = '';
+
+            if (donors.length === 0) {
+                donorTable.innerHTML = '<tr><td colspan="5" style="text-align:center; color: gray;">No donors found.</td></tr>';
+            } else {
+                donors.forEach(function(donor) {
+                    const tr = document.createElement('tr');
+                    const btn = document.createElement('button');
+                    btn.className = 'btn btn-primary request-btn';
+                    btn.textContent = 'Request';
+                    btn.dataset.id = donor.id;
+                    btn.dataset.name = donor.name;
+                    btn.dataset.date = dateInput;
+                    btn.dataset.time = displayTime;
+                    btn.dataset.group = group;
+
+                    const tdName = document.createElement('td'); tdName.textContent = donor.name;
+                    const tdGroup = document.createElement('td'); tdGroup.textContent = donor.blood_group;
+                    const tdLoc = document.createElement('td'); tdLoc.textContent = donor.location;
+                    const tdPhone = document.createElement('td'); tdPhone.textContent = donor.phone;
+                    const tdAction = document.createElement('td'); tdAction.appendChild(btn);
+
+                    tr.appendChild(tdName);
+                    tr.appendChild(tdGroup);
+                    tr.appendChild(tdLoc);
+                    tr.appendChild(tdPhone);
+                    tr.appendChild(tdAction);
+                    donorTable.appendChild(tr);
+                });
+            }
+        }
+
+        // Safe event delegation - no inline onclick, no special character issues
+        document.addEventListener('click', async function(e) {
+            if (!e.target.classList.contains('request-btn')) return;
+
+            const btn = e.target;
+            const recipientId = btn.dataset.id;
+            const name = btn.dataset.name;
+            const date = btn.dataset.date;
+            const time = btn.dataset.time;
+            const group = btn.dataset.group;
+            const patientName = localStorage.getItem('name') || 'A patient';
+            const message = 'URGENT: ' + patientName + ' needs ' + group + ' blood on ' + date + ' at ' + time + '. Please respond!';
+
+            btn.disabled = true;
+            btn.textContent = 'Sending...';
+
+            try {
+                const res = await fetch('/api/requests', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + token
+                    },
+                    body: JSON.stringify({ recipient_id: recipientId, message: message })
+                });
+
+                // Safely parse response - server might return HTML on errors
+                let response = {};
+                const contentType = res.headers.get('content-type');
+                if (contentType && contentType.includes('application/json')) {
+                    response = await res.json();
+                }
+
+                if (res.ok) {
+                    alert('Request sent to ' + name + '! They will see it on their dashboard.');
+                    btn.textContent = 'Sent \u2713';
+                    btn.style.background = 'green';
+                    btn.style.borderColor = 'green';
+                } else if (res.status === 401) {
+                    alert('Session expired. Please login again.');
+                    localStorage.clear();
+                    window.location.href = 'login.html';
+                } else {
+                    alert('Request failed: ' + (response.error || 'Server error ' + res.status));
+                    btn.disabled = false;
+                    btn.textContent = 'Request';
+                }
+            } catch (err) {
+                alert('Error: ' + err.message);
+                btn.disabled = false;
+                btn.textContent = 'Request';
+            }
+        });
+    </script>
+</body>
+</html>

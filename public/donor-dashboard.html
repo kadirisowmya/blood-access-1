@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Donor Dashboard - Blood Access</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <nav>
+        <a href="/" class="logo"><i class="fas fa-drop"></i> Blood Access</a>
+        <div class="nav-links">
+            <span style="color: var(--primary); font-weight: 700; margin-right: 15px;"><i class="fas fa-user-circle"></i> <span id="navUserName"></span></span>
+            <a href="/">Home</a>
+            <a href="#" onclick="localStorage.clear(); window.location.href='login.html'">Logout</a>
+        </div>
+    </nav>
+
+    <div class="dashboard" style="max-width: 800px; margin: 0 auto;">
+        <h2>Donor Profile</h2>
+        <div class="stats-card" style="margin-top: 30px;">
+            <p><strong>Name:</strong> <span id="donorName"></span></p>
+            <p><strong>Blood Group:</strong> <span id="donorGroup"></span></p>
+            <p><strong>Status:</strong> <span id="donorStatus" style="color: green;">Available</span></p>
+            <br>
+            <button class="btn btn-primary">Update Availability</button>
+        </div>
+
+        <div style="margin-top: 40px;">
+            <h3>Recent Notifications</h3>
+            <div id="notifications">
+                <p style="color: var(--text-muted);">No urgent requests matching your blood group in your area currently.</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const token = localStorage.getItem('token');
+        if (!token) window.location.href = 'login.html';
+        const name = localStorage.getItem('name') || 'User';
+        document.getElementById('navUserName').textContent = name;
+        document.getElementById('donorName').innerText = name;
+
+        let isAvailable = true;
+
+        async function toggleAvailability() {
+            isAvailable = !isAvailable;
+            const res = await fetch('/api/donor/availability', {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ is_available: isAvailable })
+            });
+            const data = await res.json();
+            document.getElementById('donorStatus').innerText = isAvailable ? 'Available' : 'Not Available';
+            document.getElementById('donorStatus').style.color = isAvailable ? 'green' : 'red';
+            alert(data.message);
+        }
+
+        async function loadNotifications() {
+            const res = await fetch('/api/notifications', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const notifications = await res.json();
+            const container = document.getElementById('notifications');
+            if (notifications.length > 0) {
+                container.innerHTML = '';
+                notifications.forEach(n => {
+                    container.innerHTML += `
+                        <div class="stats-card" style="margin-bottom: 10px; border-left: 4px solid var(--primary);">
+                            <p>${n.message}</p>
+                            <small>${new Date(n.created_at).toLocaleString()}</small>
+                        </div>
+                    `;
+                });
+            }
+        }
+
+        document.querySelector('.btn-primary').onclick = toggleAvailability;
+        loadNotifications();
+        setInterval(loadNotifications, 5000);
+    </script>
+</body>
+</html>
